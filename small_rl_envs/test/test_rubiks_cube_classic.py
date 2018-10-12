@@ -1,5 +1,6 @@
 from small_rl_envs.rubiks_cube_classic import RubiksCubeClassicEnv
 
+import nose.tools as t
 import numpy as np
 import numpy.testing as nt
 
@@ -64,5 +65,37 @@ def test_reversion():
         env.step(number * 2)
 
         nt.assert_array_almost_equal(state, env._state)
+
+
+def test_solved():
+    env = RubiksCubeClassicEnv(0)
+
+    for i in range(100):
+        env.reset()
+
+        t.assert_true(env.is_solved())
+
+        step1 = np.random.randint(6)
+        step2 = np.random.randint(6)
+
+        env.step(2 * step1)
+        env.step(2 * step2)
+
+        obs, rew, done, info = env.step(2 * step2 + 1)
+
+        t.assert_false(env.is_solved())
+
+        obs2, rew2, done2, info2 = env.step(2 * step1 + 1)
+
+        t.assert_true(env.is_solved())
+
+        t.assert_equal(rew, 0.0)
+        t.assert_equal(done, False)
+
+        t.assert_equal(rew2, 1.0)
+        t.assert_equal(done2, True)
+
+
+
 
 

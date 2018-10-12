@@ -2,9 +2,10 @@ import gym
 import gym.spaces as spaces
 import numpy as np
 import numba
+import numba.types as nt
 
 
-@numba.jit(nopython=True)
+@numba.njit(nt.void(numba.uint8[:, :, ::1], numba.int_), cache=True)
 def rubiks_cube_play(state: np.ndarray, action_idx: int) -> None:
     """ Most important function in this module. How does rotating each face affect the cube? - numba version """
     face_idx = action_idx // 2
@@ -96,6 +97,12 @@ def rubiks_cube_play(state: np.ndarray, action_idx: int) -> None:
             state[3, 2, :] = state[4, ::-1, 2]
             state[4, :, 2] = state[1, 0, :]
             state[1, 0, :] = temp[::-1]
+
+
+@numba.njit(nt.boolean(numba.uint8[:, :, ::1]), cache=True)
+def cube_is_solved(state: np.ndarray) -> bool:
+    """ Check if cube is in the solved state """
+    return np.all(state == state[:, 0:1, 0:1])
 
 
 def rubiks_cube_play_original(state: np.ndarray, action_idx: int):
@@ -264,7 +271,7 @@ class RubiksCubeClassicEnv(gym.Env):
 
     def is_solved(self):
         """ Check if given cube is solved """
-        return False
+        return cube_is_solved(self._state)
 
     def step(self, action: int):
         """Run one timestep of the environment's dynamics. When end of
@@ -279,7 +286,8 @@ class RubiksCubeClassicEnv(gym.Env):
         Returns:
             observation (object): agent's observation of the current environment
             reward (float) : amount of reward returned after previous action
-            done (boolean): whether the episode has ended, in which case further step() calls will return undefined results
+            done (boolean): whether the episode has ended, in which case further step() calls will return
+                            undefined results
             info (dict): contains auxiliary diagnostic information (helpful for debugging, and sometimes learning)
         """
         assert 0 <= action < 12, "Action must be within range"
