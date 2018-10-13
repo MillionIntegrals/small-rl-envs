@@ -253,6 +253,7 @@ class RubiksCubeClassicEnv(gym.Env):
     def __init__(self, shuffle_count=300):
         self._state = np.zeros(shape=(6, 3, 3), dtype=np.uint8)
         self._shuffle_count = shuffle_count
+        self._info = {'shuffle_count': self._shuffle_count}
 
         self._initialize_starting_cube()
         self._shuffle()
@@ -294,9 +295,9 @@ class RubiksCubeClassicEnv(gym.Env):
         rubiks_cube_play(self._state, action)
 
         if self.is_solved():
-            return self._state, 1.0, True, {}
+            return self._state, 1.0, True, self._info.copy()
         else:
-            return self._state, 0.0, False, {}
+            return self._state, 0.0, False, self._info.copy()
 
     def reset(self):
         """Resets the state of the environment and returns an initial observation.
