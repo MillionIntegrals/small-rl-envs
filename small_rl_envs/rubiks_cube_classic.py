@@ -222,7 +222,6 @@ class RubiksCubeClassicEnv(gym.Env):
     metadata = {'render.modes': [
         'rgb_array'
     ]}
-    reward_range = (0.0, 1.0)
     spec = None
 
     colors = [
@@ -251,6 +250,8 @@ class RubiksCubeClassicEnv(gym.Env):
     observation_space = spaces.Box(low=0, high=5, shape=(6, 3, 3), dtype=np.uint8)
 
     def __init__(self, shuffle_count=300, win_reward=1.0, move_reward=0.0):
+        self.reward_range = (min(win_reward, move_reward), max(win_reward, move_reward))
+
         self._state = np.zeros(shape=(6, 3, 3), dtype=np.uint8)
         self._shuffle_count = shuffle_count
         self._info = {'shuffle_count': self._shuffle_count}
