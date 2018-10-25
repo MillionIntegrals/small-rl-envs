@@ -6,19 +6,19 @@ import numba
 import numba.types as nt
 
 
-@numba.njit(nt.void(numba.double[::1], numba.int_, numba.double), cache=True)
-def up_right_play(state: np.ndarray, action_idx: int, stepsize: float) -> None:
+@numba.njit(nt.void(numba.int32[::1], numba.int32[::1], numba.int_), cache=True)
+def up_right_play(state: np.ndarray, bounds: np.ndarray, action_idx: int) -> None:
     if action_idx == 0:
-        state[0] = max(state[0] - stepsize, 0.0)
+        state[0] = max(state[0] - 1, 0)
     elif action_idx == 1:
-        state[0] = min(state[0] + stepsize, 1.0)
+        state[0] = min(state[0] + 1, bounds[0]-1)
     elif action_idx == 2:
-        state[1] = max(state[1] - stepsize, 0.0)
+        state[1] = max(state[1] - 1, 0)
     elif action_idx == 3:
-        state[1] = min(state[1] + stepsize, 1.0)
+        state[1] = min(state[1] + 1, bounds[1]-1)
 
 
-class UpRightSparseEnv(gym.Env):
+class DownRightSparseEnv(gym.Env):
     """
     An environment where the goal is to reach an upper right corner by the agent.
     Sounds easy but is actually hard to solve using generic methods.
@@ -33,18 +33,33 @@ class UpRightSparseEnv(gym.Env):
     ]}
 
     action_space = spaces.Discrete(4)
-    observation_space = spaces.Box(low=0.0, high=1.0, shape=(2,), dtype=np.double)
 
-    def __init__(self, stepsize=0.01, win_reward=1.0, move_reward=0.0):
+    def __init__(self, width, height, start_location=(0, 0), win_reward=1.0, move_reward=0.0):
         self.reward_range = (min(win_reward, move_reward), max(win_reward, move_reward))
+        self.start_location = np.array(start_location, dtype=np.int32)
+        self.width = width
+        self.height = height
+        self.observation_space = spaces.Box(low=0, high=255, shape=(self.width+2, self.height+2, 3), dtype=np.uint8)
 
-        self.stepsize = stepsize
         self.win_reward = win_reward
         self.move_reward = move_reward
 
-        self._state = np.array([0.0, 0.0], dtype=np.double)
-        self._goal_state = np.array([1.0, 1.0], dtype=np.double)
-        self._info = {'stepsize': stepsize}
+        self._state = self.start_location.copy()
+        self._goal_state = np.array([width-1, height-1], dtype=np.int32)
+        self._bounds = self._goal_state
+        self._info = {'start_location': self.start_location}
+
+        self._agent_color_array = np.array(self.agent_color, dtype=np.uint8)
+
+        self._initial_observation = np.zeros((width+2, height+2, 3), dtype=np.uint8)
+        self._initial_observation[0, :, :] = np.array(self.wall_color, dtype=np.uint8).reshape(1, 3)
+        self._initial_observation[:, 0, :] = np.array(self.wall_color, dtype=np.uint8).reshape(1, 3)
+        self._initial_observation[-1, :, :] = np.array(self.wall_color, dtype=np.uint8).reshape(1, 3)
+        self._initial_observation[:, -1, :] = np.array(self.wall_color, dtype=np.uint8).reshape(1, 3)
+        self._initial_observation[self.start_location[0]+1, self.start_location[1]+1, :] = self._agent_color_array
+        self._initial_observation[self._goal_state[0]+1, self._goal_state[1]+1, :] = np.array(self.goal_color, dtype=np.uint8)
+
+        self._current_observation = self._initial_observation.copy()
 
     def is_solved(self):
         """ Check if given cube is solved """
@@ -69,12 +84,14 @@ class UpRightSparseEnv(gym.Env):
         """
         assert 0 <= action < 4, "Action must be within range"
 
-        up_right_play(self._state, action, self.stepsize)
+        self._current_observation[self._state[0]+1, self._state[1]+1, :] = 0.0
+        up_right_play(self._state, self._bounds, action)
+        self._current_observation[self._state[0]+1, self._state[1]+1, :] = self._agent_color_array
 
         if self.is_solved():
-            return self._state, self.win_reward, True, self._info.copy()
+            return self._current_observation, self.win_reward, True, self._info.copy()
         else:
-            return self._state, self.move_reward, False, self._info.copy()
+            return self._current_observation, self.move_reward, False, self._info.copy()
 
     def reset(self):
         """Resets the state of the environment and returns an initial observation.
@@ -82,8 +99,9 @@ class UpRightSparseEnv(gym.Env):
         Returns: observation (object): the initial observation of the
             space.
         """
-        self._state = np.zeros(shape=(2,), dtype=np.int)
-        return self._state
+        self._state = self.start_location.copy()
+        self._current_observation = self._initial_observation.copy()
+        return self._current_observation
 
     def render(self, mode='human'):
         """Renders the environment.
@@ -123,24 +141,7 @@ class UpRightSparseEnv(gym.Env):
                     super(MyEnv, self).render(mode=mode) # just raise an exception
         """
         if mode == 'rgb_array':
-            canvas = np.zeros(shape=(5 + 128, 5 + 128, 3), dtype=np.uint8)
-
-            canvas[:2, :] = self.wall_color
-            canvas[-2:, :] = self.wall_color
-            canvas[:, :2] = self.wall_color
-            canvas[:, -2:] = self.wall_color
-
-            canvas[
-                int(np.round(127 * self._goal_state[0])) + 2: int(np.round(127 * self._goal_state[0])) + 4,
-                int(np.round(127 * self._goal_state[1])) + 2: int(np.round(127 * self._goal_state[1])) + 4
-            ] = self.goal_color
-
-            canvas[
-                int(np.round(127 * self._state[0])) + 2: int(np.round(127 * self._state[0])) + 4,
-                int(np.round(127 * self._state[1])) + 2: int(np.round(127 * self._state[1])) + 4
-            ] = self.agent_color
-
-            return canvas
+            return self._current_observation
         else:
             super().render(mode=mode)
 
