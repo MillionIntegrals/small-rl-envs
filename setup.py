@@ -7,7 +7,7 @@ Collection of simple OpenAI gym environments to train and test your reinforcemen
 
 setup(
     name='small-rl-envs',
-    version='0.1.4',
+    version='0.2.0',
     description="Small reinforcement learning environments",
     long_description=long_description,
     url='https://github.com/MillionIntegrals/small-rl-envs',
