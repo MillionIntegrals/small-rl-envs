@@ -7,7 +7,7 @@ import numba.types as nt
 
 
 @numba.njit(nt.void(numba.int32[::1], numba.int32[::1], numba.int_), cache=True)
-def up_right_play(state: np.ndarray, bounds: np.ndarray, action_idx: int) -> None:
+def move_agent(state: np.ndarray, bounds: np.ndarray, action_idx: int) -> None:
     if action_idx == 1:
         state[0] = max(state[0] - 1, 0)
     elif action_idx == 2:
@@ -94,8 +94,9 @@ class DownRightSparseEnv(gym.Env):
         """
         assert 0 <= action < 5, "Action must be within range"
 
-        self._current_observation[self._state[0]+1, self._state[1]+1, :] = 0.0
-        up_right_play(self._state, self._bounds, action)
+        self._current_observation[self._state[0]+1, self._state[1]+1, :] = 0
+
+        move_agent(self._state, self._bounds, action)
         self._current_observation[self._state[0]+1, self._state[1]+1, :] = self._agent_color_array
 
         if self.is_solved():
