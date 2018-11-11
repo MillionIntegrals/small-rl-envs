@@ -10,6 +10,7 @@ nose = "*"
 numpy = "*"
 gym = "*"
 numba = "*"
+pygame = "*"
 
 [requires]
 python_version = "3.6"
