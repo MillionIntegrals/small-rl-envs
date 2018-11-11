@@ -396,4 +396,3 @@ class RubiksCubeClassicEnv(gym.Env):
               this won't be true if seed=None, for example.
         """
         return
-
