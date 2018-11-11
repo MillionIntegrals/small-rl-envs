@@ -1,4 +1,5 @@
 import gym
+import gym.envs.registration
 import gym.spaces as spaces
 import numpy as np
 
@@ -8,13 +9,13 @@ import numba.types as nt
 
 @numba.njit(nt.void(numba.int32[::1], numba.int32[::1], numba.int_), cache=True)
 def up_right_play(state: np.ndarray, bounds: np.ndarray, action_idx: int) -> None:
-    if action_idx == 0:
+    if action_idx == 1:
         state[0] = max(state[0] - 1, 0)
-    elif action_idx == 1:
-        state[0] = min(state[0] + 1, bounds[0]-1)
     elif action_idx == 2:
-        state[1] = max(state[1] - 1, 0)
+        state[0] = min(state[0] + 1, bounds[0]-1)
     elif action_idx == 3:
+        state[1] = max(state[1] - 1, 0)
+    elif action_idx == 4:
         state[1] = min(state[1] + 1, bounds[1]-1)
 
 
@@ -32,7 +33,15 @@ class DownRightSparseEnv(gym.Env):
         'rgb_array'
     ]}
 
-    action_space = spaces.Discrete(4)
+    action_space = spaces.Discrete(5)
+
+    action_meaning = {
+        0: 'NOOP',
+        1: 'UP',
+        2: 'DOWN',
+        3: 'LEFT',
+        4: 'RIGHT'
+    }
 
     def __init__(self, width, height, start_location=(0, 0), win_reward=1.0, move_reward=0.0):
         self.reward_range = (min(win_reward, move_reward), max(win_reward, move_reward))
@@ -46,7 +55,7 @@ class DownRightSparseEnv(gym.Env):
 
         self._state = self.start_location.copy()
         self._goal_state = np.array([width-1, height-1], dtype=np.int32)
-        self._bounds = self._goal_state
+        self._bounds = np.array([width, height], dtype=np.int32)
         self._info = {'start_location': self.start_location}
 
         self._agent_color_array = np.array(self.agent_color, dtype=np.uint8)
@@ -57,7 +66,9 @@ class DownRightSparseEnv(gym.Env):
         self._initial_observation[-1, :, :] = np.array(self.wall_color, dtype=np.uint8).reshape(1, 3)
         self._initial_observation[:, -1, :] = np.array(self.wall_color, dtype=np.uint8).reshape(1, 3)
         self._initial_observation[self.start_location[0]+1, self.start_location[1]+1, :] = self._agent_color_array
-        self._initial_observation[self._goal_state[0]+1, self._goal_state[1]+1, :] = np.array(self.goal_color, dtype=np.uint8)
+        self._initial_observation[self._goal_state[0]+1, self._goal_state[1]+1, :] = (
+            np.array(self.goal_color, dtype=np.uint8)
+        )
 
         self._current_observation = self._initial_observation.copy()
 
@@ -82,7 +93,7 @@ class DownRightSparseEnv(gym.Env):
                             undefined results
             info (dict): contains auxiliary diagnostic information (helpful for debugging, and sometimes learning)
         """
-        assert 0 <= action < 4, "Action must be within range"
+        assert 0 <= action < 5, "Action must be within range"
 
         self._current_observation[self._state[0]+1, self._state[1]+1, :] = 0.0
         up_right_play(self._state, self._bounds, action)
@@ -170,3 +181,40 @@ class DownRightSparseEnv(gym.Env):
         """
         return
 
+    def get_keys_to_action(self):
+        keyword_to_key = {
+            'UP':      ord('w'),
+            'DOWN':    ord('s'),
+            'LEFT':    ord('a'),
+            'RIGHT':   ord('d'),
+        }
+
+        keys_to_action = {}
+
+        for action_id, action_meaning in self.action_meaning.items():
+            keys = []
+            for keyword, key in keyword_to_key.items():
+                if keyword in action_meaning:
+                    keys.append(key)
+            keys = tuple(sorted(keys))
+
+            assert keys not in keys_to_action
+            keys_to_action[keys] = action_id
+        return keys_to_action
+
+
+def register():
+    gym.envs.registration.register(
+        'DownRightSparse-128x128-v1',
+        entry_point='small_rl_envs.down_right_sparse:DownRightSparseEnv',
+        kwargs={'width': 128, 'height': 128},
+        max_episode_steps=10_000,
+    )
+
+
+if __name__ == '__main__':
+    import gym.utils.play as play
+
+    register()
+    env = gym.make('DownRightSparse-128x128-v1')
+    play.play(env, zoom=8.0)
