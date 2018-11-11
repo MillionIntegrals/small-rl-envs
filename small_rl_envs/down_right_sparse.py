@@ -1,5 +1,4 @@
 import gym
-import gym.envs.registration
 import gym.spaces as spaces
 import numpy as np
 
@@ -204,7 +203,9 @@ class DownRightSparseEnv(gym.Env):
 
 
 def register():
-    gym.envs.registration.register(
+    from gym.envs.registration import register
+
+    register(
         'DownRightSparse-128x128-v1',
         entry_point='small_rl_envs.down_right_sparse:DownRightSparseEnv',
         kwargs={'width': 128, 'height': 128},
