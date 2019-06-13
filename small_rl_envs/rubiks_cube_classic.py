@@ -1,8 +1,10 @@
-import gym
+import attr
 import gym.spaces as spaces
 import numpy as np
 import numba
 import numba.types as nt
+
+from small_rl_envs.parametrized_env import ParametrizedEnv
 
 
 @numba.njit(nt.void(numba.uint8[:, :, ::1], numba.int_), cache=True)
@@ -200,7 +202,21 @@ def rubiks_cube_play_original(state: np.ndarray, action_idx: int):
             state[1, 0, :] = np.flip(temp)
 
 
-class RubiksCubeClassicEnv(gym.Env):
+@attr.s(auto_attribs=True)
+class RubiksCubeParameters:
+    """ Parameters of the rubiks cube environment """
+    # How many times should we scramble the cube
+    shuffle_count: int = 300
+
+
+@attr.s(auto_attribs=True)
+class RubiksCubeConstants:
+    """ Constants of the rubiks cube environment """
+    win_reware: float = 1.0
+    move_reward: float = 0.0
+
+
+class RubiksCubeClassicEnv(ParametrizedEnv):
     """
     An environment where the goal is to solve Rubiks cube. Reward is 1.0 only when the cube is solved and 0.0 otherwise.
     This is a fixed 6x3x3 classic cube.
@@ -217,6 +233,7 @@ class RubiksCubeClassicEnv(gym.Env):
     shuffle_count is a parameter specifying how many times should random actions be played on the environment
     to initialize it "randomly"
     """
+
 
     # Set this in SOME subclasses
     metadata = {'render.modes': [
@@ -249,18 +266,33 @@ class RubiksCubeClassicEnv(gym.Env):
     action_space = spaces.Discrete(12)
     observation_space = spaces.Box(low=0, high=5, shape=(6, 3, 3), dtype=np.uint8)
 
-    def __init__(self, shuffle_count=300, win_reward=1.0, move_reward=0.0):
-        self.reward_range = (min(win_reward, move_reward), max(win_reward, move_reward))
+    def __init__(self, parameters=None, constants=None):
+        if parameters is None:
+            parameters = RubiksCubeParameters()
+        elif isinstance(parameters, dict):
+            parameters = RubiksCubeParameters(**parameters)
+
+        if constants is None:
+            constants = RubiksCubeConstants()
+        elif isinstance(constants, dict):
+            constants = RubiksCubeConstants(**constants)
+
+        super().__init__(parameters, constants)
+
+        self.reward_range = (
+            min(self.constants.win_reward, self.constants.move_reward),
+            max(self.constants.win_reward, self.constants.move_reward)
+        )
 
         self._state = np.zeros(shape=(6, 3, 3), dtype=np.uint8)
-        self._shuffle_count = shuffle_count
-        self._info = {'shuffle_count': self._shuffle_count}
-
-        self.win_reward = win_reward
-        self.move_reward = move_reward
+        self._info = {'shuffle_count': self.parameters.shuffle_count}
 
         self._initialize_starting_cube()
         self._shuffle()
+
+    def _initialize_from_current_parameters(self):
+        """ Initialize internal state of the environment from a currently set set of parameters """
+        pass
 
     def _initialize_starting_cube(self):
         """ Initialize cube to the initial 'solved' state """
@@ -269,7 +301,7 @@ class RubiksCubeClassicEnv(gym.Env):
 
     def _shuffle(self):
         """ Shuffle the cube """
-        actions = np.random.randint(0, self.action_space.n, size=self._shuffle_count)
+        actions = np.random.randint(0, self.action_space.n, size=self.parameters.shuffle_count)
 
         for action in actions:
             rubiks_cube_play(self._state, action)
@@ -299,9 +331,9 @@ class RubiksCubeClassicEnv(gym.Env):
         rubiks_cube_play(self._state, action)
 
         if self.is_solved():
-            return self._state, self.win_reward, True, self._info.copy()
+            return self._state, self.constants.win_reward, True, self._info.copy()
         else:
-            return self._state, self.move_reward, False, self._info.copy()
+            return self._state, self.parameters.move_reward, False, self._info.copy()
 
     def reset(self):
         """Resets the state of the environment and returns an initial observation.
