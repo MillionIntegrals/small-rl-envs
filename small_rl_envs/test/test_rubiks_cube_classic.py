@@ -1,8 +1,8 @@
 from small_rl_envs.rubiks_cube_classic import RubiksCubeClassicEnv
 
-import nose.tools as t
 import numpy as np
 import numpy.testing as nt
+import pytest
 
 
 def test_scrambling():
@@ -73,7 +73,7 @@ def test_solved():
     for i in range(100):
         env.reset()
 
-        t.assert_true(env.is_solved())
+        assert env.is_solved()
 
         step1 = np.random.randint(6)
         step2 = np.random.randint(6)
@@ -83,17 +83,17 @@ def test_solved():
 
         obs, rew, done, info = env.step(2 * step2 + 1)
 
-        t.assert_false(env.is_solved())
+        assert not env.is_solved()
 
         obs2, rew2, done2, info2 = env.step(2 * step1 + 1)
 
-        t.assert_true(env.is_solved())
+        assert env.is_solved()
 
-        t.assert_equal(rew, 0.0)
-        t.assert_equal(done, False)
+        assert rew == 0.0
+        assert not done
 
-        t.assert_equal(rew2, 1.0)
-        t.assert_equal(done2, True)
+        assert rew2 == 1.0
+        assert done2
 
 
 

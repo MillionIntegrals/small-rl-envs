@@ -21,8 +21,11 @@ setup(
         'gym',
         'numba'
     ],
+    tests_require=[
+        'pytest'
+    ],
     extras_require={
-        'dev': ['nose']
+        'dev': ['pytest']
     },
     entry_points={
     },
