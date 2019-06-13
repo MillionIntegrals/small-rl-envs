@@ -4,6 +4,7 @@
 #
 #    pip-compile requirements.in
 #
+attr==0.3.1
 future==0.17.1            # via pyglet
 gym==0.12.5
 llvmlite==0.29.0          # via numba

@@ -10,6 +10,6 @@ publish:
 test:
 	pytest .
 
-requirements.txt:
+requirements.txt: requirements.in
 	pip-compile requirements.in
 
