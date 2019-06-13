@@ -25,7 +25,7 @@ setup(
         'pytest'
     ],
     extras_require={
-        'dev': ['pytest']
+        'dev': ['pytest', 'flake8']
     },
     entry_points={
     },
