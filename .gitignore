@@ -108,3 +108,6 @@ venv.bak/
 
 # Local files
 /local-scripts
+
+# Project output files
+/output
