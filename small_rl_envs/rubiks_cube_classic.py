@@ -1,15 +1,19 @@
 import attr
 import gym.spaces as spaces
-import numpy as np
 import numba
 import numba.types as nt
+import numpy as np
+import os.path
+
 from gym import Env
 
 from gym.envs.registration import EnvSpec
 
+from vel.openai.baselines import logger
+from vel.openai.baselines.bench import Monitor
 from vel.rl.api import EnvFactory
-from vel.util.situational import process_environment_settings
 from vel.rl.env.wrappers.clip_episode_length import ClipEpisodeLengthWrapper
+from vel.util.situational import process_environment_settings
 
 
 from small_rl_envs.parametrized_env import ParametrizedEnv
@@ -443,6 +447,8 @@ class RubiksCubeClassicFactory(EnvFactory):
     DEFAULT_SETTINGS = {
         'default': {
             'max_episode_frames': 10000,
+            'monitor': False,
+            'allow_early_resets': False,
             'parameters': {},
             'constants': {}
         }
@@ -465,6 +471,14 @@ class RubiksCubeClassicFactory(EnvFactory):
         )
 
         env = ClipEpisodeLengthWrapper(env, max_episode_length=settings['max_episode_frames'])
+
+        # Monitoring the env
+        if settings['monitor']:
+            logdir = logger.get_dir() and os.path.join(logger.get_dir(), str(serial_id))
+        else:
+            logdir = None
+
+        env = Monitor(env, logdir, allow_early_resets=settings['allow_early_resets'])
 
         return env
 
