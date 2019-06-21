@@ -3,6 +3,14 @@ import gym.spaces as spaces
 import numpy as np
 import numba
 import numba.types as nt
+from gym import Env
+
+from gym.envs.registration import EnvSpec
+
+from vel.rl.api import EnvFactory
+from vel.util.situational import process_environment_settings
+from vel.rl.env.wrappers.clip_episode_length import ClipEpisodeLengthWrapper
+
 
 from small_rl_envs.parametrized_env import ParametrizedEnv
 
@@ -212,7 +220,7 @@ class RubiksCubeParameters:
 @attr.s(auto_attribs=True)
 class RubiksCubeConstants:
     """ Constants of the rubiks cube environment """
-    win_reware: float = 1.0
+    win_reward: float = 1.0
     move_reward: float = 0.0
 
 
@@ -333,7 +341,7 @@ class RubiksCubeClassicEnv(ParametrizedEnv):
         if self.is_solved():
             return self._state, self.constants.win_reward, True, self._info.copy()
         else:
-            return self._state, self.parameters.move_reward, False, self._info.copy()
+            return self._state, self.constants.move_reward, False, self._info.copy()
 
     def reset(self):
         """Resets the state of the environment and returns an initial observation.
@@ -428,3 +436,41 @@ class RubiksCubeClassicEnv(ParametrizedEnv):
               this won't be true if seed=None, for example.
         """
         return
+
+
+class RubiksCubeClassicFactory(EnvFactory):
+    """ Factory class for the rubiks cube environment """
+
+    DEFAULT_SETTINGS = {
+        'default': {
+            'max_episode_frames': 10000,
+            'parameters': {},
+            'constants': {}
+        }
+    }
+
+    def __init__(self, settings=None, presets=None):
+        self.settings = process_environment_settings(self.DEFAULT_SETTINGS, settings, presets)
+
+    def specification(self) -> EnvSpec:
+        """ Return environment specification """
+        raise NotImplementedError
+
+    def instantiate(self, seed=0, serial_id=1, preset='default', extra_args=None) -> Env:
+        """ Create a new Env instance """
+        settings = self.settings[preset]
+
+        env = RubiksCubeClassicEnv(
+            parameters=RubiksCubeParameters(**settings['parameters']),
+            constants=RubiksCubeConstants(**settings['constants'])
+        )
+
+        env = ClipEpisodeLengthWrapper(env, max_episode_length=settings['max_episode_frames'])
+
+        return env
+
+
+def create(settings=None, presets=None):
+    """ Vel factory function """
+
+    return RubiksCubeClassicFactory(settings, presets)
