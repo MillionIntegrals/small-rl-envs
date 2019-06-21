@@ -54,6 +54,8 @@ class RandomizedRubiksCubeFactory(EnvFactory):
     DEFAULT_SETTINGS = {
         'default': {
             'max_episode_frames': 10000,
+            'monitor': False,
+            'allow_early_resets': False,
             'parameters': {},
             'constants': {}
         }
