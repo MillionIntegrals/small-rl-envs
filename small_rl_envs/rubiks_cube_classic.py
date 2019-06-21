@@ -460,8 +460,8 @@ class RubiksCubeClassicFactory(EnvFactory):
         settings = self.settings[preset]
 
         env = RubiksCubeClassicEnv(
-            parameters=RubiksCubeParameters(**settings['parameters']),
-            constants=RubiksCubeConstants(**settings['constants'])
+            parameters=settings['parameters'],
+            constants=settings['constants']
         )
 
         env = ClipEpisodeLengthWrapper(env, max_episode_length=settings['max_episode_frames'])
