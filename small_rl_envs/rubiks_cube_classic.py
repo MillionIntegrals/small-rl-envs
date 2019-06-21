@@ -242,7 +242,6 @@ class RubiksCubeClassicEnv(ParametrizedEnv):
     to initialize it "randomly"
     """
 
-
     # Set this in SOME subclasses
     metadata = {'render.modes': [
         'rgb_array'
