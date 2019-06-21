@@ -2,12 +2,11 @@ from small_rl_envs.rubiks_cube_classic import RubiksCubeClassicEnv
 
 import numpy as np
 import numpy.testing as nt
-import pytest
 
 
 def test_scrambling():
     """ Tested against real Rubiks cube """
-    env = RubiksCubeClassicEnv(shuffle_count=0)
+    env = RubiksCubeClassicEnv(parameters={'shuffle_count': 0})
 
     env.step(1)
     env.step(2)
@@ -68,7 +67,7 @@ def test_reversion():
 
 
 def test_solved():
-    env = RubiksCubeClassicEnv(0)
+    env = RubiksCubeClassicEnv(parameters={'shuffle_count': 0})
 
     for i in range(100):
         env.reset()
